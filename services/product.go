@@ -77,3 +77,36 @@ func (s *ProductService) Update(id string, input UpdateProductInput) (models.Pro
 	database.DB.Preload("ProductType").First(&product, "id = ?", id)
 	return product, nil
 }
+
+// FindAll with filters - Search and Category filter
+func (s *ProductService) FindAllWithFilters(search string, productTypeID string) ([]models.Product, error) {
+	var products []models.Product
+	
+	query := database.DB.Preload("ProductType")
+	
+	// Search filter
+	if search != "" {
+		query = query.Where("name ILIKE ?", "%"+search+"%")
+	}
+	
+	// Category/ProductType filter
+	if productTypeID != "" {
+		query = query.Where("product_type_id = ?", productTypeID)
+	}
+	
+	err := query.Find(&products).Error
+	return products, err
+}
+
+// GetLowStock - Get products with stock below threshold
+func (s *ProductService) GetLowStock(threshold int) ([]models.Product, error) {
+	var products []models.Product
+	
+	err := database.DB.Preload("ProductType").
+		Where("stock <= ?", threshold).
+		Order("stock ASC").
+		Find(&products).Error
+	
+	return products, err
+}
+

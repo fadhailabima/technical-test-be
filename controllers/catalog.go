@@ -1,7 +1,8 @@
 package controllers
 
 import (
-	"net/http" 
+	"net/http"
+	"strconv"
 	"technical-test-backend/services"
 
 	"github.com/gin-gonic/gin"
@@ -45,15 +46,37 @@ func AddToEtalase(c *gin.Context) {
 // @Description Melihat daftar barang yang dijual oleh Seller
 // @Tags Marketplace
 // @Security BearerAuth
+// @Param search query string false "Search product name"
+// @Param category query string false "Category/Product Type ID"
+// @Param min_price query number false "Minimum price"
+// @Param max_price query number false "Maximum price"
 // @Success 200 {object} map[string]interface{}
 // @Router /marketplace [get]
 func GetMarketplace(c *gin.Context) {
-	items, err := catService.GetMarketplaceItems()
+	// Get query parameters
+	search := c.Query("search")
+	categoryID := c.Query("category")
+	minPrice := c.DefaultQuery("min_price", "0")
+	maxPrice := c.DefaultQuery("max_price", "0")
+	
+	// Convert price strings to float64
+	var minPriceFloat, maxPriceFloat float64
+	if minPrice != "0" {
+		if val, err := strconv.ParseFloat(minPrice, 64); err == nil {
+			minPriceFloat = val
+		}
+	}
+	if maxPrice != "0" {
+		if val, err := strconv.ParseFloat(maxPrice, 64); err == nil {
+			maxPriceFloat = val
+		}
+	}
+	
+	items, err := catService.GetMarketplaceItems(search, categoryID, minPriceFloat, maxPriceFloat)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Gunakan http.StatusOK alih-alih 200
 	c.JSON(http.StatusOK, gin.H{"data": items})
 }
 

@@ -26,4 +26,16 @@ func SetupUserRoutes(r *gin.Engine) {
 		middlewares.RoleMiddleware("Admin"), 
 		controllers.DeleteUser,
 	)
+	
+	r.GET("/users/:id",
+		middlewares.AuthMiddleware(),
+		middlewares.RoleMiddleware("Admin"),
+		controllers.GetUserDetail,
+	)
+	
+	r.PUT("/users/:id",
+		middlewares.AuthMiddleware(),
+		middlewares.RoleMiddleware("Admin"),
+		controllers.UpdateUser,
+	)
 }

@@ -27,6 +27,16 @@ func (s *TransactionService) CreateOrder(input CreateOrderInput) (models.Transac
 		return models.Transaction{}, errors.New("barang tidak ditemukan")
 	}
 
+	// Validasi Stok Tersedia
+	if item.Product.Stock < input.Quantity {
+		return models.Transaction{}, errors.New("stok tidak mencukupi")
+	}
+
+	// Validasi SellerProduct Aktif
+	if !item.IsActive {
+		return models.Transaction{}, errors.New("produk tidak aktif")
+	}
+
 	// Hitung Kalkulasi Keuangan
 	qty := float64(input.Quantity)
 	
@@ -252,4 +262,115 @@ func (s *TransactionService) GetSellerTransactions(sellerID string) ([]SellerTra
 	}
 
 	return transactions, nil
+}
+
+// GetTransactionDetail - Get single transaction by ID
+type TransactionDetail struct {
+	ID             string  `json:"id"`
+	ProductName    string  `json:"product_name"`
+	BuyerName      string  `json:"buyer_name"`
+	BuyerEmail     string  `json:"buyer_email"`
+	SellerName     string  `json:"seller_name"`
+	SellerEmail    string  `json:"seller_email"`
+	Quantity       int     `json:"quantity"`
+	TotalPrice     float64 `json:"total_price"`
+	AdminFee       float64 `json:"admin_fee"`
+	SellerProfit   float64 `json:"seller_profit"`
+	Status         string  `json:"status"`
+	CreatedAt      string  `json:"created_at"`
+}
+
+func (s *TransactionService) GetTransactionDetail(transactionID string) (TransactionDetail, error) {
+	txUUID, err := uuid.Parse(transactionID)
+	if err != nil {
+		return TransactionDetail{}, errors.New("invalid transaction ID")
+	}
+
+	var result struct {
+		TransactionID string
+		ProductName   string
+		BuyerName     string
+		BuyerEmail    string
+		SellerName    string
+		SellerEmail   string
+		Quantity      int
+		TotalPrice    float64
+		AdminFee      float64
+		SellerProfit  float64
+		Status        string
+		CreatedAt     string
+	}
+
+	err = database.DB.Table("transactions").
+		Select(`
+			transactions.id as transaction_id,
+			products.name as product_name,
+			buyer.name as buyer_name,
+			buyer.email as buyer_email,
+			seller.name as seller_name,
+			seller.email as seller_email,
+			transactions.quantity,
+			transactions.total_price,
+			transactions.admin_fee,
+			transactions.seller_profit,
+			transactions.status,
+			transactions.created_at
+		`).
+		Joins("JOIN seller_products ON transactions.seller_product_id = seller_products.id").
+		Joins("JOIN products ON seller_products.product_id = products.id").
+		Joins("JOIN users as buyer ON transactions.user_id = buyer.id").
+		Joins("JOIN users as seller ON seller_products.seller_id = seller.id").
+		Where("transactions.id = ?", txUUID).
+		Scan(&result).Error
+
+	if err != nil {
+		return TransactionDetail{}, err
+	}
+
+	return TransactionDetail{
+		ID:           result.TransactionID,
+		ProductName:  result.ProductName,
+		BuyerName:    result.BuyerName,
+		BuyerEmail:   result.BuyerEmail,
+		SellerName:   result.SellerName,
+		SellerEmail:  result.SellerEmail,
+		Quantity:     result.Quantity,
+		TotalPrice:   result.TotalPrice,
+		AdminFee:     result.AdminFee,
+		SellerProfit: result.SellerProfit,
+		Status:       result.Status,
+		CreatedAt:    result.CreatedAt,
+	}, nil
+}
+
+// CancelTransaction - Cancel transaction by customer
+func (s *TransactionService) CancelTransaction(transactionID string, userID string) error {
+	txUUID, err := uuid.Parse(transactionID)
+	if err != nil {
+		return errors.New("invalid transaction ID")
+	}
+
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return errors.New("invalid user ID")
+	}
+
+	// Find transaction
+	var transaction models.Transaction
+	if err := database.DB.Where("id = ? AND user_id = ?", txUUID, userUUID).First(&transaction).Error; err != nil {
+		return errors.New("transaction not found or unauthorized")
+	}
+
+	// Only allow cancellation for PENDING transactions
+	if transaction.Status != models.StatusPending {
+		return errors.New("only pending transactions can be cancelled")
+	}
+
+	// Update status to CANCELLED
+	transaction.Status = models.StatusCancelled
+	if err := database.DB.Save(&transaction).Error; err != nil {
+		return err
+	}
+
+	return nil
 }

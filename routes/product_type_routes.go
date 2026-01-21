@@ -18,4 +18,16 @@ func SetupProductTypeRoutes(r *gin.Engine) {
 		middlewares.RoleMiddleware("Admin"), 
 		controllers.CreateType,
 	)
+	
+	r.PUT("/product-types/:id",
+		middlewares.AuthMiddleware(),
+		middlewares.RoleMiddleware("Admin"),
+		controllers.UpdateType,
+	)
+	
+	r.DELETE("/product-types/:id",
+		middlewares.AuthMiddleware(),
+		middlewares.RoleMiddleware("Admin"),
+		controllers.DeleteType,
+	)
 }

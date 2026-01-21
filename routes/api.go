@@ -13,6 +13,7 @@ func SetupRouter(r *gin.Engine) {
 	
 	// Setup all routes by entity
 	SetupAuthRoutes(r)
+	SetupProfileRoutes(r)
 	SetupProductRoutes(r)
 	SetupProductTypeRoutes(r)
 	SetupMarketplaceRoutes(r)
@@ -21,4 +22,5 @@ func SetupRouter(r *gin.Engine) {
 	SetupTransactionRoutes(r)
 	SetupDashboardRoutes(r)
 	SetupUserRoutes(r)
+	SetupReportRoutes(r)
 }

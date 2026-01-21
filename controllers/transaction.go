@@ -99,3 +99,43 @@ func GetCustomerTransactions(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": transactions})
 }
+
+// GetTransactionDetail godoc
+// @Summary Get Transaction Detail
+// @Tags Transaction
+// @Security BearerAuth
+// @Param id path string true "Transaction ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /transactions/{id} [get]
+func GetTransactionDetail(c *gin.Context) {
+	transactionID := c.Param("id")
+
+	transaction, err := trxService.GetTransactionDetail(transactionID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": transaction})
+}
+
+// CancelTransaction godoc
+// @Summary Cancel Transaction (Customer)
+// @Tags Transaction
+// @Security BearerAuth
+// @Param id path string true "Transaction ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /transactions/{id}/cancel [post]
+func CancelTransaction(c *gin.Context) {
+	transactionID := c.Param("id")
+	userID := c.GetString("userID")
+
+	err := trxService.CancelTransaction(transactionID, userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Transaction cancelled successfully"})
+}
+

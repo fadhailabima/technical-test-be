@@ -19,4 +19,15 @@ func SetupTransactionRoutes(r *gin.Engine) {
 		middlewares.RoleMiddleware("Seller"), 
 		controllers.ConfirmOrder,
 	)
+	
+	r.GET("/transactions/:id",
+		middlewares.AuthMiddleware(),
+		controllers.GetTransactionDetail,
+	)
+	
+	r.POST("/transactions/:id/cancel",
+		middlewares.AuthMiddleware(),
+		middlewares.RoleMiddleware("Pelanggan"),
+		controllers.CancelTransaction,
+	)
 }

@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"strconv"
+	"technical-test-backend/models"
 	"technical-test-backend/services"
 	"github.com/gin-gonic/gin"
 )
@@ -33,10 +35,28 @@ func CreateProduct(c *gin.Context) {
 // @Description Melihat semua master produk (Admin & Seller bisa lihat)
 // @Tags Product Master (Gudang)
 // @Security BearerAuth
+// @Param search query string false "Search product name"
+// @Param product_type_id query string false "Product Type ID filter"
 // @Success 200 {object} map[string]interface{}
 // @Router /products [get]
 func FindAllProducts(c *gin.Context) {
-	products, _ := prodService.FindAll()
+	search := c.Query("search")
+	productTypeID := c.Query("product_type_id")
+	
+	var products []models.Product
+	var err error
+	
+	if search != "" || productTypeID != "" {
+		products, err = prodService.FindAllWithFilters(search, productTypeID)
+	} else {
+		products, err = prodService.FindAll()
+	}
+	
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	
 	c.JSON(200, gin.H{"data": products})
 }
 
@@ -80,3 +100,33 @@ func UpdateProduct(c *gin.Context) {
 	
 	c.JSON(200, gin.H{"data": product})
 }
+
+// GetLowStock godoc
+// @Summary Get Low Stock Products (Admin)
+// @Description Get products with stock below threshold
+// @Tags Product Master (Gudang)
+// @Security BearerAuth
+// @Param threshold query int false "Stock threshold (default: 10)"
+// @Success 200 {object} map[string]interface{}
+// @Router /products/low-stock [get]
+func GetLowStock(c *gin.Context) {
+	threshold := 10 // default
+	if t := c.Query("threshold"); t != "" {
+		if val, err := strconv.Atoi(t); err == nil {
+			threshold = val
+		}
+	}
+	
+	products, err := prodService.GetLowStock(threshold)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(200, gin.H{
+		"threshold": threshold,
+		"count":     len(products),
+		"data":      products,
+	})
+}
+

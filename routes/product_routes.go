@@ -31,4 +31,10 @@ func SetupProductRoutes(r *gin.Engine) {
 		middlewares.RoleMiddleware("Admin"),
 		controllers.UpdateProduct,
 	)
+	
+	r.GET("/products/low-stock",
+		middlewares.AuthMiddleware(),
+		middlewares.RoleMiddleware("Admin"),
+		controllers.GetLowStock,
+	)
 }

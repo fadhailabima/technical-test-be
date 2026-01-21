@@ -1,6 +1,31 @@
 basePath: /
 definitions:
+  controllers.ChangePasswordInput:
+    properties:
+      new_password:
+        minLength: 6
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
   controllers.CreateTypeInput:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  controllers.UpdateProfileInput:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+    type: object
+  controllers.UpdateTypeInput:
     properties:
       name:
         type: string
@@ -10,8 +35,10 @@ definitions:
   services.AddToEtalaseInput:
     properties:
       product_id:
+        description: UUID produk dari gudang pusat
         type: string
       selling_price:
+        description: Harga jual seller
         minimum: 1
         type: number
     required:
@@ -84,6 +111,7 @@ definitions:
         minLength: 6
         type: string
       role_id:
+        description: UUID dari role (Seller/Pelanggan)
         type: string
     required:
     - email
@@ -111,6 +139,15 @@ definitions:
       selling_price:
         minimum: 1
         type: number
+    type: object
+  services.UpdateUserInput:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      role_id:
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -237,6 +274,23 @@ paths:
   /marketplace:
     get:
       description: Melihat daftar barang yang dijual oleh Seller
+      parameters:
+      - description: Search product name
+        in: query
+        name: search
+        type: string
+      - description: Category/Product Type ID
+        in: query
+        name: category
+        type: string
+      - description: Minimum price
+        in: query
+        name: min_price
+        type: number
+      - description: Maximum price
+        in: query
+        name: max_price
+        type: number
       responses:
         "200":
           description: OK
@@ -280,9 +334,61 @@ paths:
       summary: Tambah Kategori (Admin)
       tags:
       - Product Type
+  /product-types/{id}:
+    delete:
+      parameters:
+      - description: Product Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Hapus Kategori (Admin)
+      tags:
+      - Product Type
+    put:
+      parameters:
+      - description: Product Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Nama Kategori Baru
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateTypeInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update Kategori (Admin)
+      tags:
+      - Product Type
   /products:
     get:
       description: Melihat semua master produk (Admin & Seller bisa lihat)
+      parameters:
+      - description: Search product name
+        in: query
+        name: search
+        type: string
+      - description: Product Type ID filter
+        in: query
+        name: product_type_id
+        type: string
       responses:
         "200":
           description: OK
@@ -380,6 +486,135 @@ paths:
       summary: Update Barang Gudang (Admin)
       tags:
       - Product Master (Gudang)
+  /products/low-stock:
+    get:
+      description: Get products with stock below threshold
+      parameters:
+      - description: 'Stock threshold (default: 10)'
+        in: query
+        name: threshold
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get Low Stock Products (Admin)
+      tags:
+      - Product Master (Gudang)
+  /profile:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get User Profile
+      tags:
+      - Profile
+    put:
+      parameters:
+      - description: Profile Data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateProfileInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update User Profile
+      tags:
+      - Profile
+  /profile/password:
+    put:
+      parameters:
+      - description: Password Data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.ChangePasswordInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Change User Password
+      tags:
+      - Profile
+  /reports/sales:
+    get:
+      parameters:
+      - description: Start Date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End Date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Sales Report (Admin)
+      tags:
+      - Reports
+  /reports/top-products:
+    get:
+      parameters:
+      - description: 'Limit (default: 10)'
+        in: query
+        name: limit
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Top Products Report (Admin)
+      tags:
+      - Reports
+  /reports/top-sellers:
+    get:
+      parameters:
+      - description: 'Limit (default: 10)'
+        in: query
+        name: limit
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Top Sellers Report (Admin)
+      tags:
+      - Reports
   /seller/products:
     get:
       description: Melihat daftar produk yang dijual oleh seller yang sedang login
@@ -535,6 +770,44 @@ paths:
       summary: (Pembeli) Buat Pesanan
       tags:
       - Transaction
+  /transactions/{id}:
+    get:
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get Transaction Detail
+      tags:
+      - Transaction
+  /transactions/{id}/cancel:
+    post:
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel Transaction (Customer)
+      tags:
+      - Transaction
   /transactions/{id}/confirm:
     post:
       description: Seller memproses order pending. Stok gudang admin akan berkurang
@@ -602,6 +875,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Hapus User
+      tags:
+      - User Management
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get User Detail (Admin)
+      tags:
+      - User Management
+    put:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/services.UpdateUserInput'
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update User (Admin)
       tags:
       - User Management
   /users/admin:

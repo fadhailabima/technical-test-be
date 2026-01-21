@@ -18,3 +18,17 @@ func (s *ProductTypeService) Create(name string) (models.ProductType, error) {
 	err := database.DB.Create(&newType).Error
 	return newType, err
 }
+
+func (s *ProductTypeService) Update(id, name string) (models.ProductType, error) {
+	var productType models.ProductType
+	if err := database.DB.Where("id = ?", id).First(&productType).Error; err != nil {
+		return productType, err
+	}
+	productType.Name = name
+	err := database.DB.Save(&productType).Error
+	return productType, err
+}
+
+func (s *ProductTypeService) Delete(id string) error {
+	return database.DB.Where("id = ?", id).Delete(&models.ProductType{}).Error
+}

@@ -10,52 +10,82 @@ import (
 
 type CatalogService struct{}
 
+// AddToEtalaseInput - Input untuk seller menambahkan produk ke marketplace
 type AddToEtalaseInput struct {
-	ProductID    string  `json:"product_id" binding:"required"`
-	SellingPrice float64 `json:"selling_price" binding:"required,min=1"`
+	ProductID    string  `json:"product_id" binding:"required"`    // UUID produk dari gudang pusat
+	SellingPrice float64 `json:"selling_price" binding:"required,min=1"` // Harga jual seller
 }
 
+// MarketplaceItem - Struktur data untuk tampilan marketplace
 type MarketplaceItem struct {
-	ID            uuid.UUID `json:"seller_product_id"`
-	ProductName   string    `json:"product_name"`
-	Category      string    `json:"category"`
-	SellerName    string    `json:"seller_name"`
-	Price         float64   `json:"price"`
-	StockTersedia int       `json:"stock_available"`
+	ID            uuid.UUID `json:"seller_product_id"` // ID produk di etalase seller
+	ProductName   string    `json:"product_name"`      // Nama produk
+	Category      string    `json:"category"`          // Kategori produk
+	SellerName    string    `json:"seller_name"`       // Nama toko seller
+	Price         float64   `json:"price"`             // Harga jual
+	StockTersedia int       `json:"stock_available"`   // Stok tersedia dari gudang pusat
 }
 
+// AddToEtalase - Seller menambahkan produk dari gudang pusat ke marketplace mereka
+// Alur: Validasi produk exist -> Validasi harga jual >= harga modal -> Simpan ke SellerProduct
 func (s *CatalogService) AddToEtalase(sellerID string, input AddToEtalaseInput) (models.SellerProduct, error) {
 	sUUID, _ := uuid.Parse(sellerID)
 	pUUID, _ := uuid.Parse(input.ProductID)
 
-	// Cek Produk Master
+	// 1. Cek apakah produk master ada di gudang pusat
 	var master models.Product
 	if err := database.DB.First(&master, "id = ?", pUUID).Error; err != nil {
 		return models.SellerProduct{}, errors.New("master product not found")
 	}
 
-	// Validasi Harga
+	// 2. Validasi harga jual tidak boleh lebih rendah dari harga modal
+	// Selling Price = Harga Modal + Markup Seller
 	if input.SellingPrice < master.Price {
 		return models.SellerProduct{}, errors.New("selling price lower than capital price")
 	}
 
-	// Simpan
+	// 3. Simpan produk ke etalase seller (marketplace)
 	item := models.SellerProduct{
 		SellerID:     sUUID,
 		ProductID:    pUUID,
 		SellingPrice: input.SellingPrice,
-		IsActive:     true,
+		IsActive:     true, // Default aktif
 	}
 	err := database.DB.Create(&item).Error
 	return item, err
 }
 
-// Fungsi untuk melihat marketplace
-func (s *CatalogService) GetMarketplaceItems() ([]MarketplaceItem, error) {
+// GetMarketplaceItems - Get semua produk aktif di marketplace dengan filter
+// Filter: search (nama produk), category, price range (min-max)
+// Hanya menampilkan produk yang is_active = true
+func (s *CatalogService) GetMarketplaceItems(search string, categoryID string, minPrice float64, maxPrice float64) ([]MarketplaceItem, error) {
 	var items []models.SellerProduct
 	
-	// Query Join
-	if err := database.DB.Preload("Product.ProductType").Preload("Seller").Where("is_active = ?", true).Find(&items).Error; err != nil {
+	// 1. Build query dengan base filter: hanya produk aktif
+	query := database.DB.Preload("Product.ProductType").Preload("Seller").Where("is_active = ?", true)
+	
+	// 2. Filter pencarian berdasarkan nama produk (case insensitive)
+	if search != "" {
+		query = query.Joins("JOIN products ON seller_products.product_id = products.id").
+			Where("products.name ILIKE ?", "%"+search+"%")
+	}
+	
+	// 3. Filter berdasarkan kategori produk
+	if categoryID != "" {
+		query = query.Joins("JOIN products ON seller_products.product_id = products.id").
+			Where("products.product_type_id = ?", categoryID)
+	}
+	
+	// 4. Filter berdasarkan range harga
+	if minPrice > 0 {
+		query = query.Where("selling_price >= ?", minPrice)
+	}
+	if maxPrice > 0 {
+		query = query.Where("selling_price <= ?", maxPrice)
+	}
+	
+	// 5. Execute query
+	if err := query.Find(&items).Error; err != nil {
 		return nil, err
 	}
 

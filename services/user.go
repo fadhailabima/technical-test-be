@@ -57,3 +57,45 @@ func (s *UserService) GetAllUsers() ([]models.User, error) {
 	}
 	return users, nil
 }
+
+// GET USER BY ID
+func (s *UserService) GetUserByID(userID string) (models.User, error) {
+	var user models.User
+	if err := database.DB.Preload("Role").Omit("password").Where("id = ?", userID).First(&user).Error; err != nil {
+		return user, err
+	}
+	return user, nil
+}
+
+// UPDATE USER (Admin can update user role/status)
+type UpdateUserInput struct {
+	Name   *string `json:"name"`
+	Email  *string `json:"email"`
+	RoleID *string `json:"role_id"`
+}
+
+func (s *UserService) UpdateUser(userID string, input UpdateUserInput) (models.User, error) {
+	var user models.User
+	if err := database.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return user, err
+	}
+
+	updates := make(map[string]interface{})
+	if input.Name != nil {
+		updates["name"] = *input.Name
+	}
+	if input.Email != nil {
+		updates["email"] = *input.Email
+	}
+	if input.RoleID != nil {
+		updates["role_id"] = *input.RoleID
+	}
+
+	if err := database.DB.Model(&user).Updates(updates).Error; err != nil {
+		return user, err
+	}
+
+	// Reload with Role
+	database.DB.Preload("Role").Omit("password").First(&user, "id = ?", userID)
+	return user, nil
+}

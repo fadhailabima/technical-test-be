@@ -67,11 +67,11 @@ func (s *DashboardService) GetBuyerStats(userID string) CustomerDashboard {
 	database.DB.Model(&models.Transaction{}).Where("user_id = ? AND status = ?", userID, "PENDING").Count(&stats.PendingOrders)
 	
 	// Confirmed orders
-	database.DB.Model(&models.Transaction{}).Where("user_id = ? AND status = ?", userID, "CONFIRMED").Count(&stats.ConfirmedOrders)
+	database.DB.Model(&models.Transaction{}).Where("user_id = ? AND status = ?", userID, models.StatusCompleted).Count(&stats.ConfirmedOrders)
 	
 	// Total spent (confirmed only)
 	database.DB.Model(&models.Transaction{}).
-		Where("user_id = ? AND status = ?", userID, "CONFIRMED").
+		Where("user_id = ? AND status = ?", userID, models.StatusCompleted).
 		Select("COALESCE(SUM(total_price), 0)").
 		Scan(&stats.TotalSpent)
 	
@@ -122,7 +122,7 @@ func (s *DashboardService) GetSellerStats(sellerID string) SellerDashboard {
 	// Total sales revenue (confirmed transactions)
 	database.DB.Table("transactions").
 		Joins("JOIN seller_products ON transactions.seller_product_id = seller_products.id").
-		Where("seller_products.seller_id = ? AND transactions.status = ?", sellerID, "CONFIRMED").
+		Where("seller_products.seller_id = ? AND transactions.status = ?", sellerID, models.StatusCompleted).
 		Select("COALESCE(SUM(transactions.total_price), 0)").
 		Scan(&stats.TotalSalesRevenue)
 	
@@ -141,13 +141,13 @@ func (s *DashboardService) GetSellerStats(sellerID string) SellerDashboard {
 	// Confirmed orders
 	database.DB.Table("transactions").
 		Joins("JOIN seller_products ON transactions.seller_product_id = seller_products.id").
-		Where("seller_products.seller_id = ? AND transactions.status = ?", sellerID, "CONFIRMED").
+		Where("seller_products.seller_id = ? AND transactions.status = ?", sellerID, models.StatusCompleted).
 		Count(&stats.ConfirmedOrders)
 	
 	// Total profit (seller_profit from confirmed transactions)
 	database.DB.Table("transactions").
 		Joins("JOIN seller_products ON transactions.seller_product_id = seller_products.id").
-		Where("seller_products.seller_id = ? AND transactions.status = ?", sellerID, "CONFIRMED").
+		Where("seller_products.seller_id = ? AND transactions.status = ?", sellerID, models.StatusCompleted).
 		Select("COALESCE(SUM(transactions.seller_profit), 0)").
 		Scan(&stats.TotalProfit)
 	
@@ -169,7 +169,7 @@ func (s *DashboardService) GetSellerStats(sellerID string) SellerDashboard {
 		Select("products.name as product_name, COUNT(transactions.id) as transaction_count, SUM(transactions.quantity) as total_quantity, SUM(transactions.total_price) as total_revenue").
 		Joins("JOIN seller_products ON transactions.seller_product_id = seller_products.id").
 		Joins("JOIN products ON seller_products.product_id = products.id").
-		Where("seller_products.seller_id = ? AND transactions.status = ?", sellerID, "CONFIRMED").
+		Where("seller_products.seller_id = ? AND transactions.status = ?", sellerID, models.StatusCompleted).
 		Group("products.id, products.name").
 		Order("transaction_count DESC").
 		Limit(3).
@@ -217,7 +217,7 @@ func (s *DashboardService) GetAdminStats() AdminDashboard {
 	
 	// Platform income (admin_fee from confirmed transactions)
 	database.DB.Model(&models.Transaction{}).
-		Where("status = ?", "CONFIRMED").
+		Where("status = ?", models.StatusCompleted).
 		Select("COALESCE(SUM(admin_fee), 0)").
 		Scan(&stats.PlatformIncome)
 	

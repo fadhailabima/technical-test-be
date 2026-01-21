@@ -56,3 +56,46 @@ func FindUsers(c *gin.Context) {
 	users, _ := userService.GetAllUsers()
 	c.JSON(200, gin.H{"data": users})
 }
+
+// GetUserDetail godoc
+// @Summary Get User Detail (Admin)
+// @Tags User Management
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /users/{id} [get]
+func GetUserDetail(c *gin.Context) {
+	user, err := userService.GetUserByID(c.Param("id"))
+	if err != nil {
+		c.JSON(404, gin.H{"error": "User not found"})
+		return
+	}
+	c.JSON(200, gin.H{"data": user})
+}
+
+// UpdateUser godoc
+// @Summary Update User (Admin)
+// @Tags User Management
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Param input body services.UpdateUserInput true "Update Data"
+// @Success 200 {object} map[string]interface{}
+// @Router /users/{id} [put]
+func UpdateUser(c *gin.Context) {
+	var input services.UpdateUserInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := userService.UpdateUser(c.Param("id"), input)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Failed to update user"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"message": "User updated successfully",
+		"data":    user,
+	})
+}
