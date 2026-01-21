@@ -1,0 +1,639 @@
+basePath: /
+definitions:
+  controllers.CreateTypeInput:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  services.AddToEtalaseInput:
+    properties:
+      product_id:
+        type: string
+      selling_price:
+        minimum: 1
+        type: number
+    required:
+    - product_id
+    - selling_price
+    type: object
+  services.CreateAdminInput:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  services.CreateOrderInput:
+    properties:
+      quantity:
+        minimum: 1
+        type: integer
+      seller_product_id:
+        type: string
+      userID:
+        description: Dari Token
+        type: string
+    required:
+    - quantity
+    - seller_product_id
+    type: object
+  services.CreateProductInput:
+    properties:
+      name:
+        type: string
+      price:
+        minimum: 1
+        type: number
+      product_type_id:
+        type: string
+      stock:
+        minimum: 0
+        type: integer
+    required:
+    - name
+    - price
+    - product_type_id
+    - stock
+    type: object
+  services.LoginInput:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  services.RegisterInput:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      role_id:
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - role_id
+    type: object
+  services.UpdateProductInput:
+    properties:
+      name:
+        type: string
+      price:
+        minimum: 1
+        type: number
+      product_type_id:
+        type: string
+      stock:
+        minimum: 0
+        type: integer
+    type: object
+  services.UpdateSellerProductInput:
+    properties:
+      is_active:
+        type: boolean
+      selling_price:
+        minimum: 1
+        type: number
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: bimadharmawan6@gmail.com
+    name: Fadhail Athaillah Bima Dharmawan
+  description: API Technical Test Junior Fullstack (Go + Postgres + UUID)
+  termsOfService: http://swagger.io/terms/
+  title: Inventory Management API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Masuk menggunakan Email & Password untuk dapat Token JWT
+      parameters:
+      - description: Input Data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/services.LoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login User
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Mendaftarkan pengguna baru (Role ID dikirim sebagai String UUID)
+      parameters:
+      - description: Input Data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/services.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register User Baru
+      tags:
+      - Auth
+  /auth/roles:
+    get:
+      description: Mendapatkan list role yang tersedia untuk registrasi (Seller dan
+        Pelanggan saja, Admin tidak termasuk)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Available Roles
+      tags:
+      - Auth
+  /customer/transactions:
+    get:
+      description: Customer melihat semua transaksi pembelian mereka dengan detail
+        seller dan produk
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: (Customer) List Transaksi Pembelian
+      tags:
+      - Transaction
+  /dashboard:
+    get:
+      description: Menampilkan statistik keuangan dan transaksi berdasarkan Role User
+        yang login
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Dashboard Statistik (Multi-Role)
+      tags:
+      - Dashboard
+  /marketplace:
+    get:
+      description: Melihat daftar barang yang dijual oleh Seller
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: (Pembeli) Lihat Marketplace
+      tags:
+      - Marketplace
+  /product-types:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Daftar Kategori
+      tags:
+      - Product Type
+    post:
+      parameters:
+      - description: Nama Kategori
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateTypeInput'
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tambah Kategori (Admin)
+      tags:
+      - Product Type
+  /products:
+    get:
+      description: Melihat semua master produk (Admin & Seller bisa lihat)
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Daftar Barang Gudang
+      tags:
+      - Product Master (Gudang)
+    post:
+      consumes:
+      - application/json
+      description: Admin memasukkan master data produk
+      parameters:
+      - description: Data Produk
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateProductInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Input Barang ke Gudang (Admin)
+      tags:
+      - Product Master (Gudang)
+  /products/{id}:
+    delete:
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Hapus Barang Gudang (Admin)
+      tags:
+      - Product Master (Gudang)
+    put:
+      consumes:
+      - application/json
+      description: Admin dapat memperbarui data produk master (nama, stock, harga,
+        kategori)
+      parameters:
+      - description: Product ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Data Update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/services.UpdateProductInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update Barang Gudang (Admin)
+      tags:
+      - Product Master (Gudang)
+  /seller/products:
+    get:
+      description: Melihat daftar produk yang dijual oleh seller yang sedang login
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: (Seller) Lihat Daftar Produk Sendiri
+      tags:
+      - Seller Catalog
+    post:
+      consumes:
+      - application/json
+      description: Seller memilih barang dari gudang admin dan menentukan harga jual
+        sendiri
+      parameters:
+      - description: Data Markup
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/services.AddToEtalaseInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: (Seller) Pajang Barang & Markup Harga
+      tags:
+      - Seller Catalog
+  /seller/products/{id}:
+    delete:
+      description: Seller menonaktifkan produk mereka dari marketplace (soft delete)
+      parameters:
+      - description: Seller Product ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: (Seller) Hapus Produk dari Marketplace
+      tags:
+      - Seller Catalog
+    put:
+      consumes:
+      - application/json
+      description: Seller dapat memperbarui harga jual atau status aktif produk mereka
+      parameters:
+      - description: Seller Product ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Data Update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/services.UpdateSellerProductInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: (Seller) Update Harga Produk di Marketplace
+      tags:
+      - Seller Catalog
+  /seller/transactions:
+    get:
+      description: Seller melihat semua transaksi dari produk mereka dengan detail
+        buyer dan profit
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: (Seller) List Semua Transaksi
+      tags:
+      - Transaction
+  /transactions:
+    post:
+      consumes:
+      - application/json
+      description: 'Pembeli membuat order ke lapak seller (Status: PENDING)'
+      parameters:
+      - description: Data Order
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateOrderInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: (Pembeli) Buat Pesanan
+      tags:
+      - Transaction
+  /transactions/{id}/confirm:
+    post:
+      description: Seller memproses order pending. Stok gudang admin akan berkurang
+        di sini.
+      parameters:
+      - description: Transaction ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: (Seller) Konfirmasi Pesanan
+      tags:
+      - Transaction
+  /users:
+    get:
+      description: Mengambil list semua user beserta rolenya
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lihat Daftar Semua User
+      tags:
+      - User Management
+  /users/{id}:
+    delete:
+      description: Menghapus user berdasarkan ID (Hard Delete)
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Hapus User
+      tags:
+      - User Management
+  /users/admin:
+    post:
+      consumes:
+      - application/json
+      description: Menambahkan user dengan role Admin
+      parameters:
+      - description: Data Admin
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/services.CreateAdminInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tambah Admin Baru (Super Admin Only)
+      tags:
+      - User Management
+swagger: "2.0"
